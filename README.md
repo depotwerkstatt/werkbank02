@@ -4,6 +4,8 @@ Baustein 2 der Depotwerkstatt. Prüft die Zitate in einer KI-Antwort gegen die O
 
 Warum ohne KI: Wer eine KI fragt, ob ihre Zitate stimmen, lässt den Prüfling sich selbst prüfen. Der Zitat-Prüfer ist reine Textsuche. Er kann nichts erfinden.
 
+Entstanden im Newsletter **Depotwerkstatt** – KI-Aktienanalyse selbst bauen, jede Zahl geprüft. Wie der Baustein entstand und was die Tests ergeben haben: [depotwerkstatt.substack.com](https://depotwerkstatt.substack.com/?utm_source=github)
+
 ## Was er prüft
 
 Für jedes Zitat in der KI-Antwort:
