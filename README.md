@@ -1,4 +1,4 @@
-# Werkbank 02 – Zitat-Prüfer, ohne KI (v1.0)
+# Werkbank 02 – Zitat-Prüfer, ohne KI (v1.1)
 
 Baustein 2 der Depotwerkstatt. Prüft die Zitate in einer KI-Antwort gegen die Originaldokumente: PDF und KI-Antwort rein, Prüfprotokoll raus.
 
@@ -14,6 +14,7 @@ Für jedes Zitat in der KI-Antwort:
 2. **Auf welcher Seite?** Verglichen wird mit der gedruckten Seitenzahl (z. B. „Form 10-K | 29“), nicht mit der Seitenzahl im PDF-Programm.
 3. **Wurde mit „…“ gekürzt?** Dann zeigt er, was weggelassen wurde.
 4. **Geht der Satz nach dem Zitat weiter?** Dann zeigt er den Rest des Satzes. Stehen darin Wörter wie „except“, „not“, „primarily“ oder „sofern“, gibt es eine Warnung.
+   Neu in v1.1: In den Details stehen bei Textzitaten auch **der Satz davor und der Satz danach**. Einschränkungen stehen oft dort („Ohne Sondereffekte …“, „Diese Schätzung setzt voraus …“). Die beiden Sätze ändern das Urteil nicht und lösen keine Warnung aus, sonst würde fast jedes Zitat zu LESEN. Kurz drüberlesen genügt.
 5. **Nicht gefunden?** Dann sucht er die ähnlichste Stelle und zeigt, welche Zahlen abweichen. Ohne ähnliche Stelle ist das Zitat vermutlich erfunden.
 
 ## Urteile
@@ -57,6 +58,7 @@ Mac/Linux: `pip3 install pypdf`, dann `python3 werkbank02.py …`.
 
 ## Änderungen
 
+- v1.1 (27.10.2026): zeigt den Satz vor und nach dem Zitat (nur zur Info, ohne Warnung). Anstoss: Butterfly Market Insider, der fragte, ob der Prüfer auch merkt, wenn der Satz davor die Aussage dreht. Demo-Bericht um ein Beispiel dafür ergänzt.
 - v1.0 (7.10.2026): erste Version. Getestet mit der Originalantwort von ChatGPT aus Ausgabe 2 auf Apples 10-K und 10-Q (PDF).
 
 ## Lizenz

@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 r"""
-Werkbank 02 (v1.0) – Zitat-Prüfer. Ohne KI.
+Werkbank 02 (v1.1) – Zitat-Prüfer. Ohne KI.
 
 Prüft die Zitate in einer KI-Antwort gegen die Originaldokumente:
   1. Steht das Zitat wörtlich im Dokument?
   2. Auf welcher Seite? Stimmt die Seitenangabe der KI?
   3. Wurde mit „…" gekürzt? Wenn ja: Was wurde weggelassen?
   4. Geht der Satz nach dem Zitat weiter? Wenn ja: Wie?
+     Neu in v1.1: Zeigt auch den Satz davor und den Satz danach (nur zur Info, ohne Warnung).
   5. Nicht gefunden: Was ist die ähnlichste Stelle, welche Zahlen weichen ab?
 
 Aufruf (Windows, im Cursor-Terminal):
@@ -30,7 +31,7 @@ try:
 except Exception:
     pass
 
-VERSION = "1.0"
+VERSION = "1.1"
 
 # Wörter, die eine Aussage einschränken. Stehen sie im weggelassenen Teil, unbedingt lesen.
 EINSCHRAENKER = [
@@ -201,6 +202,39 @@ def satzrest(seite, start, ende):
     nach = nach[:m.end()] if m else nach
     vor = vor.split(" | ")[-1]
     return vor.strip(), nach.strip()
+
+
+# Satzende: Punkt, Ausrufe- oder Fragezeichen vor Leerraum. Nicht nach Abkürzungen wie „Inc.“, „U.S.“, „Mio.“.
+SATZENDE = re.compile(r"(?<!\b[A-Z])(?<!\bInc)(?<!\bCorp)(?<!\bLtd)(?<!\bCo)(?<!\bNo)(?<!\bvs)(?<!\bMio)(?<!\bMrd)"
+                      r"(?<!\bca)(?<!\bNr)(?<!\bbzw)(?<!\bz\.B)(?<!\be\.g)(?<!\bi\.e)[.!?][\"')]?(?=\s|$)")
+
+
+def nachbarsaetze(seite, start, ende):
+    """Der ganze Satz vor und nach dem Satz, in dem das Zitat steht (gleiche Seite).
+    Nur zur Anzeige: Einschränkungen stehen oft im Satz davor („Ohne Sondereffekte …“) oder danach."""
+    t = seite["anzeige"]
+    grenzen = [0] + [m.end() for m in SATZENDE.finditer(t)] + [len(t)]
+    k = max(i for i, g in enumerate(grenzen) if g <= start)          # Beginn des Zitat-Satzes
+    j = min((i for i, g in enumerate(grenzen) if g >= ende), default=len(grenzen) - 1)  # Ende des Zitat-Satzes
+    davor = t[grenzen[k - 1]:grenzen[k]] if k > 0 else ""
+    danach = t[grenzen[j]:grenzen[j + 1]] if j + 1 < len(grenzen) else ""
+    davor = davor.split(" | ")[-1].strip()   # Fusszeile vom Vorblatt abschneiden
+    danach = danach.split(" | ")[0].strip()  # Fusszeile abschneiden
+
+    def brauchbar(x):
+        return len(woerter(x.lower())) >= 4 and not tabellenzeile(x)
+
+    davor = ("…" + davor[-300:]) if len(davor) > 300 else davor
+    danach = (danach[:300] + "…") if len(danach) > 300 else danach
+    return (davor if brauchbar(davor) else ""), (danach if brauchbar(danach) else "")
+
+
+def nachbar_hinweise(erg, seite, start, ende):
+    davor, danach = nachbarsaetze(seite, start, ende)
+    if davor:
+        erg["hinweise"].append(f"Satz davor (zur Info): „{davor}“")
+    if danach:
+        erg["hinweise"].append(f"Satz danach (zur Info): „{danach}“")
 
 
 def label_und_rest(text):
@@ -414,6 +448,7 @@ def pruefe(zitat, docs):
                 if nach and len(nach) > 2:
                     erg["hinweise"].append(f"Der Satz geht nach dem Zitat weiter: „{nach[:300]}“")
                 erg["seite"] = seite_stimmt(zitat["seite"], [s])
+                nachbar_hinweise(erg, s, spans[0][0], spans[-1][1])
                 return erg
 
     # 2) wörtlich?
@@ -444,6 +479,8 @@ def pruefe(zitat, docs):
                     erg["hinweise"].append("ACHTUNG: Im Rest des Satzes stehen einschränkende Wörter: " + ", ".join(ein) + ".")
             if vor and len(woerter(vor)) >= 2:
                 erg["hinweise"].append(f"Der Satz beginnt vor dem Zitat: „{vor[-200:]}“")
+            if not tabellenzeile(text):
+                nachbar_hinweise(erg, s, a, e)
             return erg
 
     # 3) nicht wörtlich: ähnlichste Stelle
@@ -513,6 +550,8 @@ def protokoll(antwort_name, doc_infos, ergebnisse):
     z.append("")
     z.append("OK = wörtlich und Seite stimmt · LESEN = wörtlich, aber gekürzt oder Satz geht mit Einschränkung weiter · PRÜFEN = abweichend oder falsche Seite · FEHLT = steht so nicht im Dokument")
     z.append("")
+    z.append("In den Details stehen bei Textzitaten auch der Satz davor und der Satz danach. Sie ändern das Urteil nicht. Kurz drüberlesen: Steht dort eine Bedingung („sofern“, „ohne“, „except“), die das Zitat einschränkt?")
+    z.append("")
     z.append("| Nr. | Urteil | Befund | Dokument | Seite laut KI | Gefunden auf | Zitat (Anfang) |")
     z.append("|---|---|---|---|---|---|---|")
     for i, e in enumerate(ergebnisse, 1):
@@ -549,7 +588,7 @@ def protokoll(antwort_name, doc_infos, ergebnisse):
 # ---------------------------------------------------------------- Demo (offline, fiktive Daten)
 
 DEMO_DOK = [
-    "Muster AG Geschäftsbericht 2025\n\nUmsatz und Ergebnis\nDer Umsatz stieg im Geschäftsjahr 2025 um 8 % auf 1'240 Mio. CHF. "
+    "Muster AG Geschäftsbericht 2025\n\nUmsatz und Ergebnis\nAlle folgenden Zahlen gelten ohne die im Mai verkaufte Sparte Logistik. Der Umsatz stieg im Geschäftsjahr 2025 um 8 % auf 1'240 Mio. CHF. "
     "Das Betriebsergebnis betrug 186 Mio. CHF.\n\nMuster AG | Geschäftsbericht 2025 | 12",
     "Ausblick\nDie Muster AG erwartet für 2026 ein Umsatzwachstum von 5 bis 7 %, sofern sich die Rohstoffpreise nicht "
     "weiter erhöhen. Die Investitionen werden 2026 auf rund 90 Mio. CHF steigen, hauptsächlich für das neue Werk in Polen "
