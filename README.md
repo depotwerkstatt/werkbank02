@@ -1,4 +1,4 @@
-# Werkbank 02 – Zitat-Prüfer, ohne KI (v1.1)
+# Werkbank 02 – Zitat-Prüfer, ohne KI (v1.2)
 
 Baustein 2 der Depotwerkstatt. Prüft die Zitate in einer KI-Antwort gegen die Originaldokumente: PDF und KI-Antwort rein, Prüfprotokoll raus.
 
@@ -22,7 +22,7 @@ Für jedes Zitat in der KI-Antwort:
 | Urteil | Bedeutung |
 |---|---|
 | **OK** | Wörtlich, Seite stimmt |
-| **LESEN** | Wörtlich, aber gekürzt oder der Satz geht weiter. Ganz lesen: Ändert der fehlende Teil die Aussage? |
+| **LESEN** | Wörtlich, aber gekürzt oder der Satz geht weiter. Ganz lesen: Ändert der fehlende Teil die Aussage? Neu in v1.2 auch: „ZAHLEN AUF DER SEITE“ = die KI hat eine Tabellenzeile umgebaut (mit „\|“, „:“ oder eingefügten Jahren), alle Zahlen stehen aber an der Stelle im Original. Kurz prüfen, ob Zeile und Jahr passen. |
 | **PRÜFEN** | Falsche Seite, oder fast wörtlich mit Abweichung (oft eine Zahl) |
 | **FEHLT** | Steht so nicht im Dokument |
 
@@ -58,6 +58,7 @@ Mac/Linux: `pip3 install pypdf`, dann `python3 werkbank02.py …`.
 
 ## Änderungen
 
+- v1.2 (13.11.2026): umgebaute Tabellenzeilen → LESEN „ZAHLEN AUF DER SEITE“ statt PRÜFEN, wenn alle Zahlen an der Stelle im Original stehen (Jahreszahlen und die Seitenzahl in der Fusszeile zählen nicht). Fehler behoben: Stand in einer Zeile ein Klammerhinweis in „…“ und das Zitat in "…", wurde der Hinweis geprüft und das Zitat übersehen. Beides gemeldet von Flex Finance, der den Prüfer mit Ausgabe 6 nachgetestet hat. Gegenprobe: Demo und alle 6 Läufe aus Ausgabe 6 unverändert, ausser 4 Tabellenwerten aus Gemini-Läufen (vorher PRÜFEN, jetzt LESEN, Werte richtig); eingebaute Zahlendreher bleiben PRÜFEN/FEHLT.
 - v1.1 (27.10.2026): zeigt den Satz vor und nach dem Zitat (nur zur Info, ohne Warnung). Anstoss: Butterfly Market Insider, der fragte, ob der Prüfer auch merkt, wenn der Satz davor die Aussage dreht. Demo-Bericht um ein Beispiel dafür ergänzt.
 - v1.0 (7.10.2026): erste Version. Getestet mit der Originalantwort von ChatGPT aus Ausgabe 2 auf Apples 10-K und 10-Q (PDF).
 
