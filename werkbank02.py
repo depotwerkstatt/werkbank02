@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 r"""
-Werkbank 02 (v1.1) – Zitat-Prüfer. Ohne KI.
+Werkbank 02 (v1.2) – Zitat-Prüfer. Ohne KI.
 
 Prüft die Zitate in einer KI-Antwort gegen die Originaldokumente:
   1. Steht das Zitat wörtlich im Dokument?
@@ -8,6 +8,10 @@ Prüft die Zitate in einer KI-Antwort gegen die Originaldokumente:
   3. Wurde mit „…" gekürzt? Wenn ja: Was wurde weggelassen?
   4. Geht der Satz nach dem Zitat weiter? Wenn ja: Wie?
      Neu in v1.1: Zeigt auch den Satz davor und den Satz danach (nur zur Info, ohne Warnung).
+     Neu in v1.2: Umgebaute Tabellenzeilen (KI fügt „|“, „:“ oder Jahre ein) → LESEN „ZAHLEN AUF DER SEITE“
+     statt PRÜFEN, wenn alle Zahlen an der Stelle im Original stehen. Fehler behoben: Ein Klammerhinweis
+     in „…“ (z. B. Spalte „September 26, 2026“) wurde statt des eigentlichen Zitats geprüft.
+     (Beides gemeldet von Flex Finance, 13.11.2026.)
   5. Nicht gefunden: Was ist die ähnlichste Stelle, welche Zahlen weichen ab?
 
 Aufruf (Windows, im Cursor-Terminal):
@@ -31,7 +35,7 @@ try:
 except Exception:
     pass
 
-VERSION = "1.1"
+VERSION = "1.2"
 
 # Wörter, die eine Aussage einschränken. Stehen sie im weggelassenen Teil, unbedingt lesen.
 EINSCHRAENKER = [
@@ -168,13 +172,24 @@ def finde_zitate(antwort, labels):
                 seite = next(re.sub(r"\D", "", c) for c in zellen if re.fullmatch(r"(?:S\.\s*|p\.\s*)?\d{1,4}", c))
                 kandidaten.append((text.strip(" \"„“”«»'"), seite))
         if not kandidaten:
+            # v1.2: alle Anführungszeichen-Arten zusammen auswerten (vorher gewann die erste Art,
+            # z. B. ein Klammerhinweis (Spalte „September 26, 2026“) statt des eigentlichen "…"-Zitats).
+            treffer = []
             for muster in ZITAT_MUSTER:
                 for m in muster.finditer(roh):
                     if len(woerter(norm(m.group(1)))) >= 3:
-                        s = SEITE.search(roh)
-                        kandidaten.append((m.group(1).strip(), s.group(1) if s else None))
-                if kandidaten:
-                    break
+                        treffer.append((m.start(), m.end(), m.group(1).strip()))
+            # Treffer, die in einem anderen liegen, weglassen
+            treffer = [t for t in treffer if not any(o != t and o[0] <= t[0] and t[1] <= o[1] for o in treffer)]
+            # Treffer in runden Klammern sind Hinweise der KI, kein Zitat – sofern es ein Zitat ausserhalb gibt
+            def in_klammer(pos):
+                return roh[:pos].count("(") > roh[:pos].count(")")
+            draussen = [t for t in treffer if not in_klammer(t[0])]
+            if draussen:
+                treffer = draussen
+            s = SEITE.search(roh)
+            for _, _, t in sorted(treffer):
+                kandidaten.append((t, s.group(1) if s else None))
         for text, seite in kandidaten:
             if seite is None and doc_in(roh) is None:
                 continue  # Text in Anführungszeichen ohne Quellenangabe ist kein Beleg
@@ -504,6 +519,28 @@ def pruefe(zitat, docs):
             fehlt = sorted(zahlen(text) - zahlen(fenster))
             if fehlt:
                 erg["hinweise"].append("Zahlen im Zitat, die an dieser Stelle nicht stehen: " + ", ".join(fehlt))
+            # v1.2: umgeformte Tabellenzeile? Wenn alle Zahlen des Zitats auf der Seite stehen,
+            # ist es kein erfundenes Zitat, sondern eine umgebaute Zeile → LESEN statt PRÜFEN.
+            # Massgebend sind die Zahlen an der ähnlichsten Stelle (nicht irgendwo auf der Seite,
+            # sonst passt z. B. „14“ zufällig zur Seitenzahl). Jahreszahlen zählen nicht als Wert.
+            werte = {z for z in zahlen(text) if not re.fullmatch(r"(?:19|20)\d\d", z)}
+            # Fenster etwas verlängern: In Tabellen stehen zwischen den Zahlen Spaltenköpfe,
+            # die die KI weglässt, darum reicht das Original weiter als das „Zitat“.
+            # Fusszeile mit der Seitenzahl abschneiden, sonst passt eine falsche Zahl zufällig zur Seitenzahl.
+            ohne_fuss = s["anzeige"]
+            if s["zeilen"] and any(m.search(s["zeilen"][-1]) for m in GEDRUCKTE_SEITE):
+                f0 = ohne_fuss.rfind(s["zeilen"][-1])
+                if f0 > 0:
+                    ohne_fuss = ohne_fuss[:f0]
+            a0 = ohne_fuss.find(fenster)
+            weiter = ohne_fuss[a0:a0 + 2 * len(fenster)] if a0 >= 0 else fenster
+            if werte and werte <= zahlen(weiter):
+                erg["befund"] = "ZAHLEN AUF DER SEITE"
+                erg["hinweise"].append(f"Nicht wörtlich (die KI hat Tabelle oder Text umgebaut, z. B. mit „|“, „:“ oder eingefügten Jahren), aber alle Zahlen des Zitats stehen an der ähnlichsten Stelle auf {seite_label(s)}: " + ", ".join(sorted(werte)) + ". Kurz lesen, ob Zeile und Spalte (Jahr) passen.")
+                erg["seite"] = seite_stimmt(zitat["seite"], [s])
+                if erg["seite"] == "nein":
+                    erg["hinweise"].append(f"Seitenangabe der KI falsch: {seite_label(s)}, nicht S. {zitat['seite']}.")
+                return erg
         else:
             erg["hinweise"].append(f"Keine ähnliche Stelle im Dokument (beste Übereinstimmung {round(r * 100)} %). Vermutlich erfunden oder übersetzt.")
             erg["fundstelle"] = None
@@ -517,11 +554,14 @@ def pruefe(zitat, docs):
 # ---------------------------------------------------------------- Protokoll
 
 AMPEL = {"TABELLE": "OK", "WÖRTLICH": "OK", "WÖRTLICH (bis auf Satzzeichen)": "OK", "MIT AUSLASSUNG": "LESEN",
-         "FAST WÖRTLICH": "PRÜFEN", "UMFORMULIERT": "PRÜFEN", "NICHT GEFUNDEN": "FEHLT"}
+         "FAST WÖRTLICH": "PRÜFEN", "UMFORMULIERT": "PRÜFEN", "NICHT GEFUNDEN": "FEHLT",
+         "ZAHLEN AUF DER SEITE": "LESEN"}
 
 
 def gesamturteil(e):
     b = e["befund"]
+    if b == "ZAHLEN AUF DER SEITE":
+        return "PRÜFEN" if e.get("seite") == "nein" else "LESEN"
     if b == "TABELLE":
         if e.get("seite") == "nein":
             return "PRÜFEN"
