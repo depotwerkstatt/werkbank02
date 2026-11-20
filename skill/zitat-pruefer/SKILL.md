@@ -58,4 +58,4 @@ Gib am Schluss eine kurze Liste aus:
 - Eingescannte PDFs ohne Text gehen nicht.
 - Übersetzte Zitate gelten als nicht gefunden.
 
-Idee für diesen Skill: Flex Finance (November 2026). Werkzeug und Tests: depotwerkstatt.substack.com
+Idee für diesen Skill: FelxFinance (substack.com/@felixfinance) (November 2026). Werkzeug und Tests: depotwerkstatt.substack.com
