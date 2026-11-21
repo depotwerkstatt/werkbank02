@@ -30,7 +30,7 @@ Für jedes Zitat in der KI-Antwort:
 
 Den Zitat-Prüfer gibt es auch als Web-App: KI-Antwort einfügen, PDF hochladen, Prüfen. Gleiche Prüflogik wie `werkbank02.py`, ohne KI. Hochgeladene Dateien liegen nur während der Prüfung in einem temporären Ordner und werden nicht gespeichert. Füge trotzdem nichts Persönliches ein.
 
-Link: (folgt)
+**Link: [zitat-pruefer.streamlit.app](https://zitat-pruefer.streamlit.app/)** (Gratis-Hosting: Hat länger niemand die App genutzt, braucht der erste Start etwa eine Minute.)
 
 Lokal starten: `pip install -r requirements.txt`, dann `streamlit run app.py`.
 
