@@ -26,6 +26,14 @@ Für jedes Zitat in der KI-Antwort:
 | **PRÜFEN** | Falsche Seite, oder fast wörtlich mit Abweichung (oft eine Zahl) |
 | **FEHLT** | Steht so nicht im Dokument |
 
+## Ohne Installation: im Browser
+
+Den Zitat-Prüfer gibt es auch als Web-App: KI-Antwort einfügen, PDF hochladen, Prüfen. Gleiche Prüflogik wie `werkbank02.py`, ohne KI. Hochgeladene Dateien liegen nur während der Prüfung in einem temporären Ordner und werden nicht gespeichert. Füge trotzdem nichts Persönliches ein.
+
+Link: (folgt)
+
+Lokal starten: `pip install -r requirements.txt`, dann `streamlit run app.py`.
+
 ## Installation (Windows, einmalig)
 
 1. Python installieren, falls noch nicht da (siehe Werkbank 01): https://www.python.org/downloads/windows/ → Haken bei „Add python.exe to PATH“.
@@ -58,6 +66,7 @@ Mac/Linux: `pip3 install pypdf`, dann `python3 werkbank02.py …`.
 
 ## Änderungen
 
+- Web-App (21.11.2026): `app.py` (Streamlit) als Oberfläche über `werkbank02.py`, Prüflogik unverändert. Gegenprobe: Demo als Text und als PDF ergibt in App und Skript dieselben 6 Urteile; eingescanntes PDF zeigt die Warnung.
 - v1.2 (13.11.2026): umgebaute Tabellenzeilen → LESEN „ZAHLEN AUF DER SEITE“ statt PRÜFEN, wenn alle Zahlen an der Stelle im Original stehen (Jahreszahlen und die Seitenzahl in der Fusszeile zählen nicht). Fehler behoben: Stand in einer Zeile ein Klammerhinweis in „…“ und das Zitat in "…", wurde der Hinweis geprüft und das Zitat übersehen. Beides gemeldet von Flex Finance, der den Prüfer mit Ausgabe 6 nachgetestet hat. Gegenprobe: Demo und alle 6 Läufe aus Ausgabe 6 unverändert, ausser 4 Tabellenwerten aus Gemini-Läufen (vorher PRÜFEN, jetzt LESEN, Werte richtig); eingebaute Zahlendreher bleiben PRÜFEN/FEHLT.
 - v1.1 (27.10.2026): zeigt den Satz vor und nach dem Zitat (nur zur Info, ohne Warnung). Anstoss: Butterfly Market Insider, der fragte, ob der Prüfer auch merkt, wenn der Satz davor die Aussage dreht. Demo-Bericht um ein Beispiel dafür ergänzt.
 - v1.0 (7.10.2026): erste Version. Getestet mit der Originalantwort von ChatGPT aus Ausgabe 2 auf Apples 10-K und 10-Q (PDF).
